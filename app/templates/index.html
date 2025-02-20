@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Draw a Digit (16x16)</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(16, 20px); /* 16 columns, each 20px wide */
+            grid-template-rows: repeat(16, 20px); /* 16 rows, each 20px high */
+            gap: 1px;
+            justify-content: center;
+        }
+
+        .pixel {
+            width: 20px;
+            height: 20px;
+            background-color: white;
+            border: 1px solid #ddd;
+            cursor: pointer;
+        }
+
+        .pixel.active {
+            background-color: black;
+        }
+
+        #prediction {
+            font-size: 24px;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <h1>Draw a Digit (16x16)</h1>
+
+    <!-- Grid for drawing -->
+    <div id="pixelGrid" class="grid"></div>
+    <br>
+
+    <button id="clearButton">Clear</button>
+    <button id="predictButton">Predict</button>
+    <div id="prediction">Predicted digit: -</div>
+
+    <script>
+        const pixelGrid = document.getElementById('pixelGrid');
+        const clearButton = document.getElementById('clearButton');
+        const predictButton = document.getElementById('predictButton');
+        const predictionDiv = document.getElementById('prediction');
+
+        const gridSize = 16; // 16x16 grid
+        const pixels = [];
+        let drawing = false; // To track if mouse is down
+        let lastPixelIndex = null; // To track the last toggled pixel
+
+        // Create the 16x16 grid of pixels
+        function createGrid() {
+            for (let i = 0; i < gridSize * gridSize; i++) {
+                const pixel = document.createElement('div');
+                pixel.classList.add('pixel');
+                pixel.addEventListener('mousedown', () => togglePixel(pixel, i));
+                pixel.addEventListener('mousemove', (e) => {
+                    if (drawing && lastPixelIndex !== i) { // Only toggle if it's a new pixel
+                        togglePixel(pixel, i);
+                        lastPixelIndex = i;
+                    }
+                });
+                pixels.push(pixel);
+                pixelGrid.appendChild(pixel);
+            }
+        }
+
+        // Start drawing when mouse is pressed
+        pixelGrid.addEventListener('mousedown', () => {
+            drawing = true;
+            lastPixelIndex = null; // Reset to prevent initial flickering
+        });
+
+        // Stop drawing when mouse is released
+        pixelGrid.addEventListener('mouseup', () => {
+            drawing = false;
+        });
+
+        // Toggle the pixel between black and white
+        function togglePixel(pixel, index) {
+            if (pixel.classList.contains('active')) {
+                pixel.classList.remove('active');
+            } else {
+                pixel.classList.add('active');
+            }
+        }
+
+        // Clear the grid
+        clearButton.addEventListener('click', () => {
+            pixels.forEach(pixel => pixel.classList.remove('active'));
+            predictionDiv.innerText = 'Predicted digit: -';
+        });
+
+        // Convert the grid to a 2D array of 0s and 1s (black and white)
+        function getGridData() {
+            const gridData = [];
+            pixels.forEach((pixel, index) => {
+                gridData.push(pixel.classList.contains('active') ? 1 : 0);
+            });
+            return gridData;
+        }
+
+        // Predict the drawn digit (send the data to the server)
+        predictButton.addEventListener('click', async () => {
+            const gridData = getGridData();
+            
+            // Send the grid data to the server for prediction
+            const response = await fetch('/predict', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ imageData: gridData })
+            });
+
+            const prediction = await response.text();
+            predictionDiv.innerText = `Predicted digit: ${prediction}`;
+        });
+
+        // Initialize the grid
+        createGrid();
+    </script>
+
+</body>
+</html>
