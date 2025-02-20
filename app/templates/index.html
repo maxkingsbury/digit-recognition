@@ -101,7 +101,7 @@
             predictionDiv.innerText = 'Predicted digit: -';
         });
 
-        // Convert the grid to a 2D array of 0s and 1s (black and white)
+        // Convert the grid to a 1D array of 0s and 1s (black and white)
         function getGridData() {
             const gridData = [];
             pixels.forEach((pixel, index) => {
@@ -113,14 +113,17 @@
         // Predict the drawn digit (send the data to the server)
         predictButton.addEventListener('click', async () => {
             const gridData = getGridData();
+
+            // Normalize the pixel values to the range [0.0, 1.0]
+            const normalizedData = gridData.map(value => value / 255); // Convert 0 or 1 to 0.0 or 1.0
             
-            // Send the grid data to the server for prediction
+            // Send the normalized data to the server for prediction
             const response = await fetch('/predict', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
                 },
-                body: JSON.stringify({ imageData: gridData })
+                body: JSON.stringify({ imageData: normalizedData })
             });
 
             const prediction = await response.text();
