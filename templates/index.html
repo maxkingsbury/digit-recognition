@@ -3,121 +3,70 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Draw a Digit (16x16)</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            text-align: center;
-        }
-
-        .grid {
-            display: grid;
-            grid-template-columns: repeat(16, 20px);
-            grid-template-rows: repeat(16, 20px);
-            gap: 1px;
-            justify-content: center;
-        }
-
-        .pixel {
-            width: 20px;
-            height: 20px;
-            background-color: white;
-            border: 1px solid #ddd;
-            cursor: pointer;
-        }
-
-        .pixel.active {
-            background-color: black;
-        }
-
-        #prediction {
-            font-size: 24px;
-            font-weight: bold;
-        }
-    </style>
+    <title>Digit Recognition</title>
 </head>
 <body>
-    <h1>Draw a Digit (16x16)</h1>
-    <div id="pixelGrid" class="grid"></div>
-    <br>
-    <button id="clearButton">Clear</button>
-    <button id="predictButton">Predict</button>
-    <div id="prediction">Predicted digit: -</div>
+    <h1>Digit Recognition</h1>
+    <canvas id="canvas" width="200" height="200" style="border: 1px solid white;"></canvas><br>
+    <button onclick="clearCanvas()">Clear</button>
+    <button onclick="predict()">Predict</button>
+
+    <h2>Prediction: <span id="prediction">---</span></h2>
 
     <script>
-        const pixelGrid = document.getElementById('pixelGrid');
-        const clearButton = document.getElementById('clearButton');
-        const predictButton = document.getElementById('predictButton');
-        const predictionDiv = document.getElementById('prediction');
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        ctx.fillStyle = 'white';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-        const gridSize = 16; 
-        const pixels = [];
-        let drawing = false; 
-        let lastPixelIndex = null;
+        let drawing = false;
+        let lastX = 0;
+        let lastY = 0;
 
-        function createGrid() {
-            for (let i = 0; i < gridSize * gridSize; i++) {
-                const pixel = document.createElement('div');
-                pixel.classList.add('pixel');
-                pixel.addEventListener('mousedown', () => togglePixel(pixel, i));
-                pixel.addEventListener('mousemove', (e) => {
-                    if (drawing && lastPixelIndex !== i) {
-                        togglePixel(pixel, i);
-                        lastPixelIndex = i;
-                    }
-                });
-                pixels.push(pixel);
-                pixelGrid.appendChild(pixel);
-            }
-        }
-
-        pixelGrid.addEventListener('mousedown', () => {
+        canvas.addEventListener('mousedown', (e) => {
             drawing = true;
-            lastPixelIndex = null; 
+            [lastX, lastY] = [e.offsetX, e.offsetY];
         });
 
-        pixelGrid.addEventListener('mouseup', () => {
+        canvas.addEventListener('mousemove', (e) => {
+            if (drawing) {
+                const [x, y] = [e.offsetX, e.offsetY];
+                ctx.beginPath();
+                ctx.moveTo(lastX, lastY);
+                ctx.lineTo(x, y);
+                ctx.stroke();
+                [lastX, lastY] = [x, y];
+            }
+        });
+
+        canvas.addEventListener('mouseup', () => {
             drawing = false;
         });
 
-        function togglePixel(pixel, index) {
-            if (pixel.classList.contains('active')) {
-                pixel.classList.remove('active');
-            } else {
-                pixel.classList.add('active');
-            }
+        // Clear canvas function
+        function clearCanvas() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height); // Clear the canvas
+            ctx.fillRect(0, 0, canvas.width, canvas.height); // Optional: Add a white background
+            document.getElementById("prediction").textContent = "---"; // Reset prediction text
         }
 
-        clearButton.addEventListener('click', () => {
-            pixels.forEach(pixel => pixel.classList.remove('active'));
-            predictionDiv.innerText = 'Predicted digit: -';
-        });
+        function predict() {
+            const image = canvas.toDataURL('image/png'); // Get base64 image data
+            console.log("Captured image data:", image);  // Log the base64 image data
 
-        function getGridData() {
-            const gridData = [];
-            pixels.forEach((pixel, index) => {
-                gridData.push(pixel.classList.contains('active') ? 1 : 0);
-            });
-            return gridData;
-        }
-
-        predictButton.addEventListener('click', async () => {
-            const gridData = getGridData();
-            
-            const response = await fetch('/predict', {
+            fetch('/predict', {
                 method: 'POST',
                 headers: {
-                    'Content-Type': 'application/json'
+                    'Content-Type': 'application/x-www-form-urlencoded',
                 },
-                body: JSON.stringify({ imageData: gridData })
-            });
-
-            const result = await response.json();
-            predictionDiv.innerText = `Predicted digit: ${result.predictedDigit}`;
-        });
-
-        createGrid();
+                body: `image=${encodeURIComponent(image)}`,
+            })
+            .then(response => response.text())
+            .then(prediction => {
+                document.getElementById("prediction").textContent = prediction; // Display prediction
+            })
+            .catch(error => console.error('Error:', error));
+        }
     </script>
-
 </body>
 </html>
