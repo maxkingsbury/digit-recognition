@@ -4,7 +4,7 @@ from sklearn.preprocessing import StandardScaler
 import pickle
 from sklearn.datasets import load_digits
 
-# Load a sample dataset (you can replace this with your own dataset)
+# Load a sample dataset
 digits = load_digits()
 X = digits.data
 y = digits.target
